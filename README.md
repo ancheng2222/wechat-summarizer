@@ -81,7 +81,7 @@ PyWxDump 3.0.42 的版本偏移表覆盖了微信 **3.2.1 ~ 3.9.11**。**3.9.12+
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/wechat-summarizer.git
+git clone https://github.com/ancheng2222/wechat-summarizer.git
 cd wechat-summarizer
 ```
 
