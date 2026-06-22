@@ -3,10 +3,11 @@
 """
 import os
 import re
+import time
 import hashlib
 import tempfile
 import sqlite3
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 from loguru import logger
 
@@ -81,8 +82,7 @@ class WeChatDBReader:
         if os.path.exists(tmp):
             # 检查是否今天解密的（避免重复解密）
             mtime = os.path.getmtime(tmp)
-            import time as _time
-            if _time.time() - mtime < 3600:  # 1小时内有效
+            if time.time() - mtime < 3600:  # 1小时内有效
                 self._decrypted_dbs[db_path] = tmp
                 return tmp
 
@@ -110,8 +110,7 @@ class WeChatDBReader:
             return matches[0]
 
         # 多个匹配，选今天消息最多的
-        import datetime as _dt
-        today_start = int(_dt.datetime.combine(_dt.date.today(), _dt.time.min).timestamp())
+        today_start = int(datetime.combine(date.today(), datetime.min.time()).timestamp())
         best_cid = None
         best_count = -1
         for cid in matches:
@@ -221,9 +220,7 @@ class WeChatDBReader:
 
         group_name = self.get_group_display_name(chatroom_id)
         today = date.today()
-        today_start = int(
-            __import__("datetime").datetime(today.year, today.month, today.day).timestamp()
-        )
+        today_start = int(datetime(today.year, today.month, today.day).timestamp())
 
         all_messages = []
 
@@ -268,7 +265,7 @@ class WeChatDBReader:
                     else:
                         sender_name = "我" if is_sender == 1 else "未知"
 
-                    msg_time = __import__("datetime").datetime.fromtimestamp(create_time)
+                    msg_time = datetime.fromtimestamp(create_time)
                     time_str = msg_time.strftime("%Y-%m-%d %H:%M:%S")
 
                     all_messages.append({
