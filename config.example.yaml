@@ -1,0 +1,43 @@
+# ============================================================
+# 微信群聊智能摘要助手 — 配置文件模板
+# 复制此文件为 config.yaml 并填入你的实际信息
+# ============================================================
+
+config_version: 1
+
+# ---- 微信数据库 ----
+# 数据库密钥: 32位hex字符串，由 PyWxDump 提取
+# 获取方式: 保持微信登录 → 运行 python -m pywxdump 获取
+db_key: ""
+# 微信数据目录: 形如 C:\...\WeChat Files\wxid_xxxxxxxx
+db_path: ""
+
+# ---- 模型 ----
+# Ollama 模型名 (推荐 qwen2.5 或 qwen2.5vl)
+ollama_model: "qwen2.5:latest"
+
+# ---- 监控群聊 ----
+groups:
+  - name: "群名关键字"          # 群名中包含此关键字即可
+    focus_persons:              # 重点关注人员（可选）
+      - "张三"
+      - "李四"
+
+# ---- 调度 ----
+# 每日运行时间 (HH:MM)
+schedule_time: "22:00"
+
+# ---- 高级选项 ----
+# 单次总结最大字符数（超出则分段）
+max_summary_chars: 12000
+
+# ---- 邮件发送（可选）----
+# 不配置则只保存到本地文件
+# QQ邮箱需开启 SMTP 服务并获取授权码: 设置 → 账户 → POP3/SMTP服务
+email:
+  sender_email: ""      # 发件人邮箱
+  sender_password: ""   # SMTP 授权码（不是邮箱密码！）
+  to_email: ""          # 收件人（留空 = 发件人）
+  smtp_host: ""         # SMTP 服务器（留空自动识别）
+  smtp_port: 0          # 端口（留空自动识别）
+  use_ssl: true
