@@ -76,6 +76,17 @@ def summarize(
     return _call_ollama(msg_lines, focus_persons, model)
 
 
+def _clean_output(text: str) -> str:
+    """清理 Ollama 输出中的格式问题"""
+    import re
+    # 移除 ```markdown ... ``` 代码块包裹（保留内部内容）
+    text = re.sub(r'```(?:markdown)?\s*\n', '', text)
+    text = text.replace('```', '')
+    # 移除模型自带的客套结尾
+    text = re.sub(r'\n*希望这些信息对您有所帮助.*$', '', text, flags=re.DOTALL)
+    return text.strip()
+
+
 def _call_ollama(
     msg_lines: list[str],
     focus_persons: list[str],
@@ -100,7 +111,7 @@ def _call_ollama(
             timeout=300,
         )
         if resp.status_code == 200:
-            return resp.json()["message"]["content"]
+            return _clean_output(resp.json()["message"]["content"])
         else:
             logger.error(f"Ollama API 错误: {resp.status_code} {resp.text}")
             return None
@@ -175,7 +186,7 @@ def _chunked_summarize(
             timeout=300,
         )
         if resp.status_code == 200:
-            return resp.json()["message"]["content"]
+            return _clean_output(resp.json()["message"]["content"])
         else:
             # 合并失败则返回各段摘要拼接
             return "\n\n---\n\n".join(chunk_summaries)
