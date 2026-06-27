@@ -204,11 +204,13 @@ class WeChatDBReader:
         self,
         group_keyword: str,
         limit: int = 5000,
+        target_date: date | None = None,
     ) -> list[dict]:
         """
-        获取指定群今天的消息。
+        获取指定群指定日期的消息。
         - group_keyword: 群名关键字
         - limit: 最大消息数
+        - target_date: 目标日期，默认今天
         返回: [{"time": "14:30", "sender": "张三", "content": "你好"}, ...]
         """
         # 先找 chatroom_id
@@ -219,8 +221,10 @@ class WeChatDBReader:
             return []
 
         group_name = self.get_group_display_name(chatroom_id)
-        today = date.today()
-        today_start = int(datetime(today.year, today.month, today.day).timestamp())
+        if target_date is None:
+            target_date = date.today()
+        day_start = int(datetime(target_date.year, target_date.month, target_date.day).timestamp())
+        day_end = day_start + 86400  # 次日 0:00
 
         all_messages = []
 
@@ -247,10 +251,10 @@ class WeChatDBReader:
                 rows = conn.execute(
                     """SELECT CreateTime, StrTalker, StrContent, BytesExtra, IsSender
                        FROM MSG
-                       WHERE StrTalker = ? AND CreateTime >= ? AND Type = 1
+                       WHERE StrTalker = ? AND CreateTime >= ? AND CreateTime < ? AND Type = 1
                        ORDER BY CreateTime ASC
                        LIMIT ?""",
-                    (chatroom_id, today_start, limit),
+                    (chatroom_id, day_start, day_end, limit),
                 ).fetchall()
 
                 for create_time, str_talker, str_content, bytes_extra, is_sender in rows:

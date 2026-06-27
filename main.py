@@ -41,7 +41,7 @@ def load_config() -> dict:
         return yaml.safe_load(f)
 
 
-def run_once(config: dict | None = None):
+def run_once(config: dict | None = None, target_date: date | None = None):
     if config is None:
         config = load_config()
 
@@ -67,8 +67,9 @@ def run_once(config: dict | None = None):
 
     reader = WeChatDBReader(key=key, db_path=db_path)
 
-    today = date.today()
-    logger.info(f"开始处理 {today} 的群聊消息")
+    if target_date is None:
+        target_date = date.today()
+    logger.info(f"开始处理 {target_date} 的群聊消息")
 
     for group in config.get("groups", []):
         group_name = group["name"]
@@ -76,7 +77,7 @@ def run_once(config: dict | None = None):
         logger.info(f"\n{'='*40}\n处理群: {group_name}\n关注: {', '.join(focus_persons) if focus_persons else '无'}\n{'='*40}")
 
         # 读取消息
-        today_msgs = reader.get_today_messages(group_keyword=group_name)
+        today_msgs = reader.get_today_messages(group_keyword=group_name, target_date=target_date)
 
         if not today_msgs:
             logger.info(f"群 [{group_name}] 今天没有消息")
@@ -86,9 +87,9 @@ def run_once(config: dict | None = None):
         new_count = save_messages(group_name, today_msgs)
         logger.info(f"群 [{group_name}] 新增 {new_count} 条消息")
 
-        all_today = get_messages(group_name, target_date=today)
-        total_count = get_message_count(group_name, target_date=today)
-        logger.info(f"群 [{group_name}] 今日累计 {total_count} 条消息")
+        all_today = get_messages(group_name, target_date=target_date)
+        total_count = get_message_count(group_name, target_date=target_date)
+        logger.info(f"群 [{group_name}] {target_date} 累计 {total_count} 条消息")
 
         # 生成摘要
         logger.info("正在生成摘要...")
@@ -98,11 +99,11 @@ def run_once(config: dict | None = None):
         summary = summarize(all_today, focus_persons, model=model, max_chars=max_chars)
 
         if summary:
-            full_text = f"# {group_name} 每日摘要\n**日期**: {today}\n\n{summary}"
+            full_text = f"# {group_name} 每日摘要\n**日期**: {target_date}\n\n{summary}"
 
             # 保存到文件
             os.makedirs(SUMMARY_DIR, exist_ok=True)
-            summary_file = os.path.join(SUMMARY_DIR, f"summary_{group_name}_{today}.md")
+            summary_file = os.path.join(SUMMARY_DIR, f"summary_{group_name}_{target_date}.md")
             with open(summary_file, "w", encoding="utf-8") as f:
                 f.write(full_text)
             logger.info(f"[OK] 摘要已保存: {summary_file}")
@@ -110,7 +111,7 @@ def run_once(config: dict | None = None):
 
             # 发送邮件
             from email_sender import send_summary_email
-            send_summary_email(config, group_name, full_text, str(today))
+            send_summary_email(config, group_name, full_text, str(target_date))
         else:
             logger.warning("摘要生成失败")
 
@@ -121,17 +122,27 @@ def main():
     parser = argparse.ArgumentParser(description="微信群聊智能摘要助手")
     parser.add_argument("--once", action="store_true", help="单次运行")
     parser.add_argument("--daemon", action="store_true", help="守护进程模式")
+    parser.add_argument("--date", type=str, default=None,
+                        help="指定日期 YYYY-MM-DD（默认今天）")
     args = parser.parse_args()
 
     setup_logger()
     config = load_config()
+
+    target_date = None
+    if args.date:
+        try:
+            target_date = date.fromisoformat(args.date)
+        except ValueError:
+            logger.error(f"日期格式错误: {args.date}，请使用 YYYY-MM-DD")
+            sys.exit(1)
 
     if args.daemon:
         from scheduler import run_daemon
         logger.info("启动守护进程模式...")
         run_daemon(config)
     else:
-        run_once(config)
+        run_once(config, target_date=target_date)
 
 
 if __name__ == "__main__":
